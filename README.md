@@ -1,0 +1,2 @@
+# trainingsplaner
+norwegian method
