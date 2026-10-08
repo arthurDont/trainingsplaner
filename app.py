@@ -3,7 +3,7 @@ import pandas as pd
 import datetime
 
 st.title("🚴‍♂️ Norwegischer Adaptiver Smart-Trainer-Planer")
-st.write("Dein tagesaktueller Coach mit Coros, Blutdruck-Sicherheit, Thermomix, Kraft- & Gewichts-Tracking!")
+st.write("Dein tagesaktueller Coach mit Coros, Blutdruck-Sicherheit, Thermomix, Mallorca-Rechner & exaktem Kraft-Log!")
 
 # --- Datenbank für Workouts & Thermomix-Verpflegung ---
 if "rezept_datenbank" not in st.session_state:
@@ -77,19 +77,45 @@ trainings_fokus = st.sidebar.selectbox(
 ausfahrt_stunden = st.sidebar.slider("Geplante Fahrtdauer (Stunden)", 1.0, 10.0, 3.5, 0.5)
 
 st.sidebar.markdown("---")
-st.sidebar.subheader("💪 Krafttraining-Log")
-kraft_gemacht = st.sidebar.checkbox("Krafttraining heute absolviert?", value=False)
-kraft_fokus = st.sidebar.selectbox("Fokus des Krafttrainings", ["Core & Rumpfstabilität", "Beinachsentraining & Kniebeugen", "Ganzkörper / Stabilität"])
-if kraft_gemacht and st.sidebar.button("Kraft-Einheit eintragen"):
-    st.session_state.kraft_historie.append(f"{datetime.date.today()}: {kraft_fokus}")
-    st.sidebar.success("Kraft-Einheit dokumentiert!")
+st.sidebar.subheader("💪 Dein Rad-Kraft-Log")
+kraft_gemacht = st.sidebar.checkbox("Kraft-Session heute absolviert?", value=False)
+
+st.sidebar.markdown("**Wähle die absolvierten Übungen aus:**")
+u_hip = st.sidebar.checkbox("Hip Extension")
+u_bauch = st.sidebar.checkbox("Bauch / Core")
+u_lat = st.sidebar.checkbox("Latzug")
+u_brust = st.sidebar.checkbox("Brustdrücken")
+u_ruder = st.sidebar.checkbox("Ruderzug")
+u_knie = st.sidebar.checkbox("Kniebeuge")
+u_curl = st.sidebar.checkbox("Arm Curls")
+u_ext = st.sidebar.checkbox("Arm Extensions")
+u_wallsit = st.sidebar.checkbox("Wall Sit (Blutdruck & Oberschenkel)")
+
+kraft_notiz = st.sidebar.text_input("Gewichte / Sätze Notiz (z.B. 3x10 @ 60kg)")
+
+if kraft_gemacht and st.sidebar.button("Kraft-Einheit speichern"):
+    ausgewaehlte_uebungen = []
+    if u_hip: ausgewaehlte_uebungen.append("Hip Ext")
+    if u_bauch: ausgewaehlte_uebungen.append("Bauch")
+    if u_lat: ausgewaehlte_uebungen.append("Latzug")
+    if u_brust: ausgewaehlte_uebungen.append("Brustdrücken")
+    if u_ruder: ausgewaehlte_uebungen.append("Ruderzug")
+    if u_knie: ausgewaehlte_uebungen.append("Kniebeuge")
+    if u_curl: ausgewaehlte_uebungen.append("Arm Curls")
+    if u_ext: ausgewaehlte_uebungen.append("Arm Extensions")
+    if u_wallsit: ausgewaehlte_uebungen.append("Wall Sit")
+    
+    uebungen_str = ", ".join(ausgewaehlte_uebungen) if ausgewaehlte_uebungen else "Keine spezifischen Übungen"
+    eintrag_text = f"{datetime.date.today()} | **Übungen:** {uebungen_str} — *Notiz:* {kraft_notiz if kraft_notiz else 'Keine Notiz'}"
+    st.session_state.kraft_historie.append(eintrag_text)
+    st.sidebar.success("Kraft-Session erfolgreich gespeichert!")
 
 # --- Berechnungs- & Sicherheits-Logik ---
 is_lang = "Lange Ausfahrt" in trainings_fokus
 is_schwellen = "Doppelter Schwellentag" in trainings_fokus or "Normales Training" in trainings_fokus
 
 if is_lang or is_schwellen:
-    nuechtern_warnung = "⚠️ **Blutdruck- & Leistungs-Sicherheit:** Da du Ramipril und Amlodipin nimmst und heute eine harte/lange Einheit fährst, **nicht streng nüchtern trainieren!** Nutze Intra-Workout-Carbs (Maltodextrin in der Flasche ab Minute 30), um Kreislaufabsackungen und Cortisol-Spitzen zu verhindern."
+    nuechtern_warnung = "⚠️ **Blutdruck- & Leistungs-Sicherheit:** Da du Ramipril und Amlodipin nimmst und heute eine harte/lange Einheit fährst, **nicht streng nüchtern trainieren!** Nutze Intra-Workout-Carbs (Maltodextrin in der Flasche ab Minute 30), um Kreislaufabsackungen zu verhindern."
     carbs_pro_stunde = 75 if is_lang else 50
 else:
     nuechtern_warnung = "✅ **Fasten-Fenster aktiv:** Perfekt für das Vormittags-Training im nüchternen Zustand (Essen ab 14:00 Uhr). Das entspannte Zone-2-Rollen harmoniert super mit deinen Blutdruckwerten."
@@ -127,8 +153,8 @@ st.markdown(f"### **{empfehlung_titel}**")
 st.info(f"🎯 **Struktur-Vorgabe:** {ausgabe_struktur}")
 st.warning(nuechtern_warnung)
 
-# Gewichts- und Kraftverlauf anzeigen
-tab1, tab2 = st.tabs(["📉 Gewichtsverlauf", "💪 Kraft-Historie"])
+# Tabs für Verlauf
+tab1, tab2, tab3 = st.tabs(["📉 Gewichtsverlauf", "💪 Kraft-Historie", "📋 Dein Kraft-Plan"])
 with tab1:
     if not st.session_state.gewicht_historie.empty:
         st.line_chart(st.session_state.gewicht_historie.set_index("Datum"))
@@ -139,9 +165,18 @@ with tab1:
 with tab2:
     if st.session_state.kraft_historie:
         for eintrag in st.session_state.kraft_historie:
-            st.write(f"- {eintrag}")
+            st.markdown(f"- {eintrag}")
     else:
         st.write("Noch keine Kraft-Einheiten dokumentiert.")
+
+with tab3:
+    st.markdown("### 🏋️ Dein persönliches Rad-Kraftprogramm")
+    st.markdown("""
+    * **Beine & Posterior Chain:** Kniebeuge, Hip Extension
+    * **Isometrisch (Blutdruck & Oberschenkel):** Wall Sit
+    * **Oberkörper Zug & Rumpf:** Ruderzug, Latzug, Bauch
+    * **Oberkörper Druck & Arme:** Brustdrücken, Arm Curls, Arm Extensions
+    """)
 
 # Rezept & Thermomix-Guide
 st.markdown("---")
