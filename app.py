@@ -3,9 +3,9 @@ import pandas as pd
 import datetime
 
 st.title("🚴‍♂️ Norwegischer Adaptiver Smart-Trainer-Planer")
-st.write("Dein tagesaktueller Coach mit Coros, Blutdruck-Sicherheit, Thermomix, Mallorca-Rechner & exaktem Kraft-Log!")
+st.write("Dein tagesaktueller Coach mit Coros, Blutdruck-Sicherheit, Thermomix, Mallorca-Rechner & veganem Kraft-Futter!")
 
-# --- Datenbank für Workouts & Thermomix-Verpflegung ---
+# --- Datenbank für Workouts & Thermomix-Verpflegung (inkl. Dr. Vegan inspirierten Rezepten) ---
 if "rezept_datenbank" not in st.session_state:
     st.session_state.rezept_datenbank = {
         "regeneration": [
@@ -19,11 +19,16 @@ if "rezept_datenbank" not in st.session_state:
         ],
         "schwellen_intervalle": [
             {
-                "titel": "Der norwegische Klassiker: 4 x 8 Minuten",
-                "typ": "Schwellen-Einheit",
-                "beschreibung": "4 Intervalle à 8 Minuten knapp unter der anaeroben Schwelle (~90% FTP) mit 2 Minuten Trabpause.",
-                "zutaten": ["200g Vollkornpasta", "150g Rote Linsen", "400g Passierte Tomaten", "1 Zwiebel"],
-                "tm_schritte": ["Zwiebel zerkleinern. Linsen und Tomaten zugeben, 20 Min / 100°C / Linkslauf garen."]
+                "titel": "High-Protein Power-Pasta: Pilz-Linsen-Erbsen-Pfanne",
+                "typ": "Post-Intervalle / High Carb & Protein",
+                "beschreibung": "Ideal nach harten Schwellentagen. Liefert komplexe Carbs und pflanzliches Protein für die Muskelregeneration.",
+                "zutaten": ["200g Vollkornpasta", "150g rote Linsen", "150g Champignons (geviertelt)", "100g TK-Erbsen", "1 Zwiebel", "2 Knoblauchzehen", "400g passierte Tomaten", "1 TL Olivenöl"],
+                "tm_schritte": [
+                    "Zwiebel und Knoblauch im Mixtopf 5 Sek / Stufe 5 zerkleinern.",
+                    "Olivenöl zugeben und 3 Min / 120°C / Stufe 1 dünsten.",
+                    "Champignons zugeben und 4 Min / 100°C / Linkslauf / Stufe 1 anbraten.",
+                    "Rote Linsen, Erbsen und passierte Tomaten zugeben. 15 Min / 100°C / Linkslauf / Stufe 1 garen (parallel Pasta auf dem Herd kochen)."
+                ]
             }
         ],
         "lang_ausfahrt_verpflegung": [
@@ -115,7 +120,7 @@ is_lang = "Lange Ausfahrt" in trainings_fokus
 is_schwellen = "Doppelter Schwellentag" in trainings_fokus or "Normales Training" in trainings_fokus
 
 if is_lang or is_schwellen:
-    nuechtern_warnung = "⚠️ **Blutdruck- & Leistungs-Sicherheit:** Da du Ramipril und Amlodipin nimmst und heute eine harte/lange Einheit fährst, **nicht streng nüchtern trainieren!** Nutze Intra-Workout-Carbs (Maltodextrin in der Flasche ab Minute 30), um Kreislaufabsackungen zu verhindern."
+    nuechtern_warnung = "⚠️ **Blutdruck- & Leistungs-Sicherheit:** Da du Ramipril und Amlodipin nimmst und heute eine harte/lange Einheit fährst, **nicht streng nüchtern trainieren!** Nutze Intra-Workout-Carbs (Maltodextrin/Isostar ab Minute 30), um Kreislaufabsackungen zu verhindern."
     carbs_pro_stunde = 75 if is_lang else 50
 else:
     nuechtern_warnung = "✅ **Fasten-Fenster aktiv:** Perfekt für das Vormittags-Training im nüchternen Zustand (Essen ab 14:00 Uhr). Das entspannte Zone-2-Rollen harmoniert super mit deinen Blutdruckwerten."
@@ -182,6 +187,7 @@ with tab3:
 st.markdown("---")
 st.subheader("🌱 Thermomix-Verpflegungs-Guide & Einkaufsliste")
 st.markdown(f"**Empfohlenes Rezept:** {aktives_rezept['titel']}")
+st.markdown(f"_Typ: {aktives_rezept['typ']} | {aktives_rezept['beschreibung']}_")
 
 spalte_links, spalte_rechts = st.columns(2)
 with spalte_links:
