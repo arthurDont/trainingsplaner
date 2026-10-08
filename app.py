@@ -1,85 +1,152 @@
 import streamlit as st
 import pandas as pd
-import random
+import datetime
 
 st.title("🚴‍♂️ Norwegischer Adaptiver Smart-Trainer-Planer")
-st.write("Dein tagesaktueller Coach mit Coros-Biometrie, Waage, Thermomix & MyWhoosh-Planung!")
+st.write("Dein tagesaktueller Coach mit Coros, Blutdruck-Sicherheit, Thermomix, Kraft- & Gewichts-Tracking!")
 
+# --- Datenbank für Workouts & Thermomix-Verpflegung ---
 if "rezept_datenbank" not in st.session_state:
     st.session_state.rezept_datenbank = {
         "regeneration": [
             {
-                "titel": "Norwegische Zone-2 Grundlagenfahrt",
+                "titel": "Norwegische Zone-2 Grundlagenfahrt (Nüchtern möglich)",
                 "typ": "Grundlagen / Aerobe Basis",
-                "beschreibung": "Strikte Zone 2 (ca. 60-70% FTP). Perfekt für den Fettstoffwechsel.",
+                "beschreibung": "Strikte Zone 2 (ca. 60-70% FTP). Perfekt für den Fettstoffwechsel im Vormittags-Fastenfenster.",
                 "zutaten": ["100g Haferflocken", "350ml Sojamilch", "1 Banane", "1 EL Ahornsirup"],
-                "tm_schritte": ["Porridge im Thermomix bei 90°C / Stufe 2.5 für 7 Minuten zubereiten."]
+                "tm_schritte": ["Porridge im Thermomix bei 90°C / Stufe 2.5 für 7 Minuten zubereiten (ab 14:00 Uhr essen)."]
             }
         ],
         "schwellen_intervalle": [
             {
                 "titel": "Der norwegische Klassiker: 4 x 8 Minuten",
-                "typ": "Schwellen-Einheit (Vormittag)",
+                "typ": "Schwellen-Einheit",
                 "beschreibung": "4 Intervalle à 8 Minuten knapp unter der anaeroben Schwelle (~90% FTP) mit 2 Minuten Trabpause.",
                 "zutaten": ["200g Vollkornpasta", "150g Rote Linsen", "400g Passierte Tomaten", "1 Zwiebel"],
                 "tm_schritte": ["Zwiebel zerkleinern. Linsen und Tomaten zugeben, 20 Min / 100°C / Linkslauf garen."]
             }
         ],
-        "doppel_schwellen_nachmittag": [
+        "lang_ausfahrt_verpflegung": [
             {
-                "titel": "Norwegische Nachmittagsschwelle: 3 x 6 Minuten",
-                "typ": "Schwellen-Einheit 2 (Nachmittag)",
-                "beschreibung": "Die zweite moderate Schwelleneinheit des Tages. Etwas kürzer, um den Reiz zu maximieren.",
-                "zutaten": ["300g Süßkartoffel", "1 Dose Kichererbsen", "200ml Kokosmilch"],
-                "tm_schritte": ["Süßkartoffel zerkleinern, Kokosmilch und Kichererbsen zugeben, 18 Min / 100°C kochen."]
+                "titel": "Mallorca 312 Carb-Boost: DIY Energy-Rice-Cakes & Drink",
+                "typ": "Langdistanz- & Magen-Darm-Training",
+                "beschreibung": "Fokus auf hohe Kohlenhydratzufuhr (60-90g/h) für Ausfahrten über 3 Stunden.",
+                "zutaten": ["300g Rundkornreis", "500ml Kokoswasser", "4 Datteln", "Ahornsirup", "Maltodextrin-Pulver"],
+                "tm_schritte": [
+                    "Reis und Kokoswasser in den Mixtopf geben, 20 Min / 100°C / Linkslauf / Stufe 1 garen.",
+                    "Datteln und Ahornsirup unterrühren, in eine Form drücken und auskühlen lassen.",
+                    "Maltodextrin für die Trinkflaschen vorbereiten (Verhältnis 2:1 mit Fruktose)."
+                ]
             }
         ]
     }
 
-st.sidebar.header("1. Biometrische Morgen-Daten")
-ftp = st.sidebar.number_input("Deine aktuelle FTP (Watt)", value=225, step=5)
-gewicht = st.sidebar.number_input("Aktuelles Gewicht heute (kg, Smart-Waage)", value=75.0, step=0.5)
+# --- Historie für Gewicht & Krafttraining in session_state ---
+if "gewicht_historie" not in st.session_state:
+    st.session_state.gewicht_historie = pd.DataFrame(columns=["Datum", "Gewicht"])
+
+if "kraft_historie" not in st.session_state:
+    st.session_state.kraft_historie = []
+
+# --- Sidebar: Biometrie, Medikamente & Tracking ---
+st.sidebar.header("1. Biometrie & Tagesform")
+ftp = st.sidebar.number_input("Deine aktuelle FTP (Watt)", value=220, step=5)
+gewicht = st.sidebar.number_input("Aktuelles Gewicht heute (kg, Smart-Waage)", value=90.0, step=0.5)
+
+if st.sidebar.button("Gewicht für heute speichern"):
+    heute_str = datetime.date.today().strftime("%Y-%m-%d")
+    new_row = pd.DataFrame({"Datum": [heute_str], "Gewicht": [gewicht]})
+    st.session_state.gewicht_historie = pd.concat([st.session_state.gewicht_historie, new_row]).drop_duplicates(subset=["Datum"], keep="last").reset_index(drop=True)
+    st.sidebar.success(f"Gewicht {gewicht} kg gespeichert!")
 
 st.sidebar.markdown("---")
-st.sidebar.subheader("Coros Uhr (Biometrie & Schlaf)")
+st.sidebar.subheader("Coros Uhr & Medikation")
 coros_hrv = st.sidebar.selectbox("Coros HRV-Status / Erholung", ["Gut / Im grünen Bereich", "Leicht erhöht / Stabil", "Niedrig / Müde"])
 schlaf_stunden = st.sidebar.slider("Schlaf (Stunden)", 4.0, 10.0, 7.5, 0.5)
-ist_doppel_tag = st.sidebar.checkbox("Doppelter Schwellentag (z.B. Freitag)?", value=False)
-verfuegbare_zeit = st.sidebar.slider("Verfügbare Zeit heute (Minuten)", 30, 150, 75, 15)
+medikamente_aktiv = st.sidebar.checkbox("Blutdrucksenker (Ramipril/Amlodipin) aktiv", value=True)
 
-carbs_empfehlung = int(gewicht * 1.2)
+trainings_fokus = st.sidebar.selectbox(
+    "Was steht heute an?", 
+    [
+        "Normales Training / Intervalle", 
+        "Lange Ausfahrt (Unter-Woche-Langdistanz / Magen-Training)", 
+        "Doppelter Schwellentag (Double Threshold)",
+        "Regeneration / Zone 2"
+    ]
+)
+ausfahrt_stunden = st.sidebar.slider("Geplante Fahrtdauer (Stunden)", 1.0, 10.0, 3.5, 0.5)
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("💪 Krafttraining-Log")
+kraft_gemacht = st.sidebar.checkbox("Krafttraining heute absolviert?", value=False)
+kraft_fokus = st.sidebar.selectbox("Fokus des Krafttrainings", ["Core & Rumpfstabilität", "Beinachsentraining & Kniebeugen", "Ganzkörper / Stabilität"])
+if kraft_gemacht and st.sidebar.button("Kraft-Einheit eintragen"):
+    st.session_state.kraft_historie.append(f"{datetime.date.today()}: {kraft_fokus}")
+    st.sidebar.success("Kraft-Einheit dokumentiert!")
+
+# --- Berechnungs- & Sicherheits-Logik ---
+is_lang = "Lange Ausfahrt" in trainings_fokus
+is_schwellen = "Doppelter Schwellentag" in trainings_fokus or "Normales Training" in trainings_fokus
+
+if is_lang or is_schwellen:
+    nuechtern_warnung = "⚠️ **Blutdruck- & Leistungs-Sicherheit:** Da du Ramipril und Amlodipin nimmst und heute eine harte/lange Einheit fährst, **nicht streng nüchtern trainieren!** Nutze Intra-Workout-Carbs (Maltodextrin in der Flasche ab Minute 30), um Kreislaufabsackungen und Cortisol-Spitzen zu verhindern."
+    carbs_pro_stunde = 75 if is_lang else 50
+else:
+    nuechtern_warnung = "✅ **Fasten-Fenster aktiv:** Perfekt für das Vormittags-Training im nüchternen Zustand (Essen ab 14:00 Uhr). Das entspannte Zone-2-Rollen harmoniert super mit deinen Blutdruckwerten."
+    carbs_pro_stunde = 0
+
+gesamt_carbs = int(carbs_pro_stunde * ausfahrt_stunden)
 
 if coros_hrv == "Niedrig / Müde" or schlaf_stunden < 6.5:
     empfehlung_titel = "⚠️ Zone-2 Erholungseinheit (Coros-Biometrie meldet Erschöpfung)"
-    ausgabe_struktur = "60 Minuten lockeres Rollen in Zone 2. Keine Intervalle."
-    ernaehrung = f"Leichte Kost ({carbs_empfehlung}g Carbs als Ziel), Fokus auf Hydratation."
+    ausgabe_struktur = "60 Minuten lockeres Rollen in Zone 2. Schone das Nervensystem."
     aktives_rezept = st.session_state.rezept_datenbank["regeneration"][0]
-elif ist_doppel_tag:
+elif is_lang:
+    empfehlung_titel = "🌴 Mallorca 312 Langdistanz-Einheit (Unter der Woche)"
+    ausgabe_struktur = f"Strikte Zone 2 über {ausfahrt_stunden} Stunden. Konsequente Nahrungsaufnahme ab Minute 30!"
+    aktives_rezept = st.session_state.rezept_datenbank["lang_ausfahrt_verpflegung"][0]
+elif is_schwellen and "Doppelter Schwellentag" in trainings_fokus:
     empfehlung_titel = "🔥 Norwegischer Doppel-Schwellentag (2 Einheiten)"
     ausgabe_struktur = "Einheit 1 (Vormittag): 4x8 Min @ 90% FTP | Einheit 2 (Nachmittag): 3x6 Min @ 90% FTP."
-    ernaehrung = f"Zwischen den Einheiten: Schnell verfügbare Kohlenhydrate zuführen! Tagesziel: ca. {carbs_empfehlung}g Carbs."
     aktives_rezept = st.session_state.rezept_datenbank["schwellen_intervalle"][0]
 else:
     empfehlung_titel = "🎯 Der norwegische Klassiker: 4 x 8 Minuten"
     ausgabe_struktur = "10 Min Warm-up | 4x (8 Min @ 90% FTP / 2 Min @ 55% FTP) | 10 Min Cool-down"
-    ernaehrung = f"Vollwertige Kohlenhydrate vor dem Training (~{carbs_empfehlung}g Kohlenhydrat-Fokus)."
     aktives_rezept = st.session_state.rezept_datenbank["schwellen_intervalle"][0]
 
-st.header("📋 Tagesempfehlung nach norwegischer Methode")
+# --- Haupt-Dashboard ---
+st.header("📋 Tagesempfehlung & Sicherheits-Check")
 
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("Waage-Gewicht", f"{gewicht} kg")
+col1.metric("Gewicht", f"{gewicht} kg")
 col2.metric("Coros HRV", coros_hrv.split()[0])
-col3.metric("Schlaf", f"{schlaf_stunden} Std")
-col4.metric("Carb-Ziel", f"~{carbs_empfehlung} g")
+col3.metric("Carbs / Stunde", f"{carbs_pro_stunde} g/h")
+col4.metric("Kraft-Log", f"{len(st.session_state.kraft_historie)} Einheiten")
 
 st.markdown(f"### **{empfehlung_titel}**")
-st.info(f"🎯 **Struktur-Vorgabe für MyWhoosh:** {ausgabe_struktur}")
-st.success(f"💡 **Biometrischer Ernährungs-Tipp:** {ernaehrung}")
+st.info(f"🎯 **Struktur-Vorgabe:** {ausgabe_struktur}")
+st.warning(nuechtern_warnung)
 
+# Gewichts- und Kraftverlauf anzeigen
+tab1, tab2 = st.tabs(["📉 Gewichtsverlauf", "💪 Kraft-Historie"])
+with tab1:
+    if not st.session_state.gewicht_historie.empty:
+        st.line_chart(st.session_state.gewicht_historie.set_index("Datum"))
+        st.dataframe(st.session_state.gewicht_historie)
+    else:
+        st.write("Noch kein Gewicht gespeichert. Nutze den Button in der Sidebar.")
+
+with tab2:
+    if st.session_state.kraft_historie:
+        for eintrag in st.session_state.kraft_historie:
+            st.write(f"- {eintrag}")
+    else:
+        st.write("Noch keine Kraft-Einheiten dokumentiert.")
+
+# Rezept & Thermomix-Guide
 st.markdown("---")
-st.subheader("🌱 Empfohlenes Recovery-Gericht & Thermomix-Guide")
-st.markdown(f"**Gericht:** {aktives_rezept['titel']}")
+st.subheader("🌱 Thermomix-Verpflegungs-Guide & Einkaufsliste")
+st.markdown(f"**Empfohlenes Rezept:** {aktives_rezept['titel']}")
 
 spalte_links, spalte_rechts = st.columns(2)
 with spalte_links:
@@ -89,12 +156,4 @@ with spalte_links:
 with spalte_rechts:
     st.markdown("🟢 **Thermomix-Schritte:**")
     for schritt in aktives_rezept['tm_schritte']:
-        st.write(f"- {schritt}")
-
-if ist_doppel_tag and coros_hrv != "Niedrig / Müde":
-    st.markdown("---")
-    st.subheader("🌙 Nachi-Einheit: Gericht für nach der 2. Session")
-    nachmittag_rezept = st.session_state.rezept_datenbank["doppel_schwellen_nachmittag"][0]
-    st.markdown(f"**Gericht:** {nachmittag_rezept['titel']}")
-    for schritt in nachmittag_rezept['tm_schritte']:
         st.write(f"- {schritt}")
