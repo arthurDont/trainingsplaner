@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import datetime
 
-st.title("🚴‍♂️ Norwegischer Adaptiver Smart-Trainer-Planer")
+st.title("🚴‍♂️ TOSSI's - Totos SuperServiceInternational - adaptiver Smart-Trainings-Planer")
 st.write("Dein tagesaktueller Coach mit Coros, Blutdruck-Sicherheit, Thermomix, Mallorca-Rechner & veganem Kraft-Futter!")
 
 # --- Datenbank für Workouts & Thermomix-Verpflegung (inkl. Dr. Vegan inspirierten Rezepten) ---
