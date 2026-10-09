@@ -18,10 +18,10 @@ if "kraft_historie" not in st.session_state:
     st.session_state.kraft_historie = []
 
 
-# --- ONBOARDING-WIZARD (ERWEITERTE GESUNDHEIT & BIOMETRIE) ---
+# --- ONBOARDING-WIZARD ---
 if not st.session_state.onboarding_abgeschlossen:
     st.title("🚀 Universal Adaptive Coach — Erweitertes Onboarding")
-    st.write("Lass uns ein präzises Profil erstellen, das medizinische und gesundheitliche Faktoren (wie Blutdruck, Diabetes & Vorerkrankungen) sicher berücksichtigt.")
+    st.write("Erstelle ein präzises Athleten-Profil inklusive allgemeiner Medikation, sportlicher Ausrichtung und Gesundheitsfaktoren.")
 
     with st.form("onboarding_form"):
         st.subheader("1. Allgemeine Biometrie")
@@ -33,18 +33,19 @@ if not st.session_state.onboarding_abgeschlossen:
         with col3:
             groesse = st.number_input("Größe (cm)", min_value=140, max_value=220, value=178)
 
-        st.subheader("2. Erweiterter Gesundheits- & Medizin-Check")
+        st.subheader("2. Gesundheit, Vorerkrankungen & Medikamente")
         
-        # Medikamente & Blutdruck
-        blutdruck_meds = st.checkbox("Regelmäßige Einnahme von Blutdrucksenkern (z.B. Ramipril, Amlodipin)?", value=True)
+        # Allgemeine Medikamente
+        medikamente_allgemein = st.text_area(
+            "Regelmäßige Medikamente (Namen, Dosierung, Einnahmezeiten):", 
+            placeholder="z.B. Ramipril, Amlodipin (täglich um 14:00 Uhr zum Essen)..."
+        )
         
-        # Diabetes-Abfrage
         diabetes_status = st.selectbox(
             "Liegt eine Diabetes-Erdiagnose vor?", 
             ["Kein Diabetes", "Diabetes Typ 2", "Diabetes Typ 1", "Prädiabetes / Blutzucker-Regulation im Fokus"]
         )
         
-        # Allgemeine Einschränkungen & Vorerkrankungen
         vorerkrankungen = st.multiselect(
             "Bekannte Vorerkrankungen oder Einflussfaktoren:",
             [
@@ -62,13 +63,26 @@ if not st.session_state.onboarding_abgeschlossen:
             "Subjektives allgemeines Gesundheits- & Energieniveau im Alltag (1 = stark eingeschränkt, 10 = Top-fit)", 
             1, 10, 8
         )
-        
-        gesundheits_notiz = st.text_area("Details zu Medikamenten, Blutzuckermanagement oder Verletzungen (optional):", placeholder="z.B. Medikamenteneinnahme um 14:00 Uhr zum Essen; Blutzuckermessung vor dem Training...")
 
-        st.subheader("3. Trainingserfahrung & Leistungsdaten")
-        erfahrung = st.selectbox("Trainingstatus", ["Einsteiger", "Fortgeschrittener", "Ambitionierter Ausdauersportler / Athlet"])
-        ftp_init = st.number_input("Aktuelle FTP (Watt) oder Schwellenwert", min_value=100, max_value=500, value=225, step=5)
-        wochenstunden = st.slider("Geplante Trainingsstunden pro Woche", 2.0, 20.0, 8.0, 0.5)
+        st.subheader("3. Sportliche Betätigung & Leistungsdaten")
+        
+        sportarten = st.multiselect(
+            "Hauptsportarten / Trainingsschwerpunkte:",
+            [
+                "Radsport / Rennrad", 
+                "Laufen / Running", 
+                "Triathlon", 
+                "Krafttraining / Fitness", 
+                "Schwimmen", 
+                "Wandern / Bergsport", 
+                "Sonstige Ausdauer"
+            ],
+            default=["Radsport / Rennrad", "Krafttraining / Fitness"]
+        )
+        
+        erfahrung = st.selectbox("Trainingstatus / Level", ["Einsteiger", "Fortgeschrittener", "Ambitionierter Ausdauersportler / Athlet"])
+        ftp_init = st.number_input("Aktuelle FTP (Watt) oder primärer Schwellenwert", min_value=50, max_value=500, value=225, step=5)
+        wochenstunden = st.slider("Geplante Trainingsstunden pro Woche", 2.0, 25.0, 8.0, 0.5)
 
         st.subheader("4. Zielsetzung & Event")
         ziel_typ = st.selectbox("Hauptziel", [
@@ -96,11 +110,11 @@ if not st.session_state.onboarding_abgeschlossen:
                 "alter": alter,
                 "gewicht": gewicht_init,
                 "groesse": groesse,
-                "blutdruck_meds": blutdruck_meds,
+                "medikamente_allgemein": medikamente_allgemein,
                 "diabetes_status": diabetes_status,
                 "vorerkrankungen": vorerkrankungen,
                 "befinden": allgemeines_befinden,
-                "gesundheit_notiz": gesundheits_notiz,
+                "sportarten": sportarten,
                 "erfahrung": erfahrung,
                 "ftp": ftp_init,
                 "wochenstunden": wochenstunden,
@@ -120,7 +134,7 @@ else:
     p = st.session_state.profil
     
     st.title(f"🚴‍♂️ Adaptives Coaching-Dashboard: {p['event_name']}")
-    st.success(f"Profil geladen | Ziel: {p['ziel_typ']} ({p['event_datum']}) | Diät: {p['ernaehrung']}")
+    st.success(f"Profil geladen | Disziplinen: {', '.join(p['sportarten'])} | Ziel: {p['ziel_typ']}")
 
     # Sidebar für tägliches Monitoring
     st.sidebar.header("Tägliches Monitoring")
@@ -143,18 +157,17 @@ else:
     with tab1:
         st.subheader("Leistungs- & Gesundheits-Übersicht")
         col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Aktuelle FTP", f"{p['ftp']} Watt")
+        col1.metric("FTP / Schwelle", f"{p['ftp']} Watt")
         col2.metric("Gewicht", f"{aktuelles_gewicht} kg")
         col3.metric("Allg. Befinden", f"{p['befinden']}/10")
         col4.metric("Tage zum Event", f"{(p['event_datum'] - datetime.date.today()).days} Tage")
         
-        # Dynamische Sicherheitswarnungen basierend auf den Onboarding-Daten
+        if p['medikamente_allgemein']:
+            st.info(f"ℹ️ **Hinterlegte Medikation:** {p['medikamente_allgemein']}")
         if p['diabetes_status'] != "Kein Diabetes":
-            st.warning(f"⚠️ **Diabetes-Hinweis aktiv ({p['diabetes_status']}):** Achte streng auf dein Blutzuckermanagement vor und während intensiver Intervalle. Halte schnelle Kohlenhydrate (Gels/Carb-Drinks) bereit.")
-        if p['blutdruck_meds']:
-            st.info("ℹ️ **Blutdruck-Medikation berücksichtigt:** Keine streng nüchternen High-Intensity-Einheiten; Intra-Workout-Carbs und zeitliche Entzerrung der Medikamente beachten.")
+            st.warning(f"⚠️ **Diabetes-Hinweis ({p['diabetes_status']}):** Blutzuckermanagement und schnelle Kohlenhydrate im Blick behalten.")
         if "Krank" in coros_hrv or p['befinden'] < 5:
-            st.error("🛑 **Achtung:** Das subjektive Befinden oder die Tagesform meldet Einschränkungen. Reduziere das Training auf lockere Zone-2-Erholung oder lege einen Ruhetag ein!")
+            st.error("🛑 **Achtung:** Das subjektive Befinden oder die Tagesform meldet Einschränkungen. Reduziere das Training auf lockere Erholung!")
 
     with tab2:
         st.subheader("Gewichtsentwicklung")
